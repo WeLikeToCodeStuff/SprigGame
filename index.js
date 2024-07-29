@@ -46,18 +46,20 @@ class Tetromino {
 };
 
 // Functions
-function InitializeTetromino(tetromino) {
+function SpawnTetromino(tetromino) {
   switch (tetromino.type) {
     case TetrominoTypes.straightTetromino:
       for (let ySpawn = 0; ySpawn < 4; ySpawn++)
         addSprite(blockSpawnPosition.x, blockSpawnPosition.y + ySpawn, tetromino.bitmapKey);
-    
+      break
+      
     case TetrominoTypes.squareTetromino:
       for (let xSpawn = 0; xSpawn < 2; xSpawn++) {
         for (let ySpawn = 0; ySpawn < 2; ySpawn++) {
           addSprite(blockSpawnPosition.x + xSpawn, blockSpawnPosition.y + ySpawn, tetromino.bitmapKey);
         };
       };
+      break
 
     case TetrominoTypes.tTetromino:
       addSprite(blockSpawnPosition.x + 1, blockSpawnPosition.y + 1, tetromino.bitmapKey);
@@ -68,6 +70,7 @@ function InitializeTetromino(tetromino) {
       for (let ySpawn = 0; ySpawn < 3; ySpawn++)
         addSprite(blockSpawnPosition.x, blockSpawnPosition.y + ySpawn, tetromino.bitmapKey);
       addSprite(blockSpawnPosition.x + 1, blockSpawnPosition.y + 2, tetromino.bitmapKey);
+      break
   
     case TetrominoTypes.skewTetromino:
       for (let xSpawn = 0; xSpawn < 2; xSpawn++) {
@@ -77,11 +80,12 @@ function InitializeTetromino(tetromino) {
       for (let xSpawn = 0; xSpawn < 2; xSpawn++) {
         addSprite(blockSpawnPosition.x + xSpawn - 1, blockSpawnPosition.y + 1, tetromino.bitmapKey);
       };
+      break
   }; 
 }
 
 // Sprites
-const newTetromino = new Tetromino("b", TetrominoTypes.skewTetromino);
+const newTetromino = new Tetromino("b", TetrominoTypes.lTetromino);
 
 setLegend(
   [ newTetromino.bitmapKey, bitmap`
@@ -103,7 +107,16 @@ setLegend(
 L111111111111111`]
 );
 
-InitializeTetromino(newTetromino)
+// Game logic
+SpawnTetromino(newTetromino)
+
+setInterval(function() {
+  if (getAll(newTetromino.bitmapKey).every(block => block.y < height() - 1)) {
+    getAll(newTetromino.bitmapKey).forEach(function(block) {
+      block.y += 1;
+    });
+  };
+}, blockDropSpeed * 1000); 
 
 // Inputs
 onInput("w", () => {
@@ -121,10 +134,3 @@ onInput("a", () => {
 onInput("d", () => {
   console.log("right");
 });
-
-// Game logic
-setInterval(function() {
-  getAll(newTetromino.bitmapKey).forEach(function(block) {
-    block.y += 1;
-  });
-}, blockDropSpeed * 1000); 
