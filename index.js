@@ -118,19 +118,31 @@ setInterval(function() {
   };
 }, blockDropSpeed * 1000); 
 
+
+let pressedKey;
 // Inputs
 onInput("w", () => {
   console.log("rotating");
+  pressedKey = "w";
 });
 
 onInput("s", () => {
   console.log("down");
+  pressedKey = "s";
 });
 
 onInput("a", () => {
   console.log("left");
+  pressedKey = "a";
 });
 
 onInput("d", () => {
   console.log("right");
+  pressedKey = "d";
+});
+
+afterInput(() => {
+
+  // End \\
+  pressedKey = null;
 });
