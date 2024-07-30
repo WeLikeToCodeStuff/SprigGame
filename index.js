@@ -51,7 +51,7 @@ function SpawnTetromino(tetromino) {
     case TetrominoTypes.straightTetromino:
       for (let ySpawn = 0; ySpawn < 4; ySpawn++)
         addSprite(blockSpawnPosition.x, blockSpawnPosition.y + ySpawn, tetromino.bitmapKey);
-      break
+      break;
       
     case TetrominoTypes.squareTetromino:
       for (let xSpawn = 0; xSpawn < 2; xSpawn++) {
@@ -59,7 +59,7 @@ function SpawnTetromino(tetromino) {
           addSprite(blockSpawnPosition.x + xSpawn, blockSpawnPosition.y + ySpawn, tetromino.bitmapKey);
         };
       };
-      break
+      break;
 
     case TetrominoTypes.tTetromino:
       addSprite(blockSpawnPosition.x + 1, blockSpawnPosition.y + 1, tetromino.bitmapKey);
@@ -70,7 +70,7 @@ function SpawnTetromino(tetromino) {
       for (let ySpawn = 0; ySpawn < 3; ySpawn++)
         addSprite(blockSpawnPosition.x, blockSpawnPosition.y + ySpawn, tetromino.bitmapKey);
       addSprite(blockSpawnPosition.x + 1, blockSpawnPosition.y + 2, tetromino.bitmapKey);
-      break
+      break;
   
     case TetrominoTypes.skewTetromino:
       for (let xSpawn = 0; xSpawn < 2; xSpawn++) {
@@ -80,9 +80,30 @@ function SpawnTetromino(tetromino) {
       for (let xSpawn = 0; xSpawn < 2; xSpawn++) {
         addSprite(blockSpawnPosition.x + xSpawn - 1, blockSpawnPosition.y + 1, tetromino.bitmapKey);
       };
-      break
+      break;
   }; 
 }
+
+function AddKeyToQueue(key) {
+    //keyQueue.push(key);
+}
+
+function MoveBlock(direction) { // Direction is a int. -x for left and x for right
+  if (getAll(newTetromino.bitmapKey).every(block => block.y < height() - 1)) {
+    getAll(newTetromino.bitmapKey).forEach(function(block) {
+      block.x += direction;
+    });
+  };
+};
+
+let dropBlock; 
+function MoveBlockDown() {
+  if (getAll(newTetromino.bitmapKey).every(block => block.y < height() - 1)) {
+    getAll(newTetromino.bitmapKey).forEach(function(block) {
+      block.y += 1;
+    });
+  };
+};
 
 // Sprites
 const newTetromino = new Tetromino("b", TetrominoTypes.lTetromino);
@@ -108,41 +129,41 @@ L111111111111111`]
 );
 
 // Game logic
-SpawnTetromino(newTetromino)
+SpawnTetromino(newTetromino);
 
-setInterval(function() {
-  if (getAll(newTetromino.bitmapKey).every(block => block.y < height() - 1)) {
-    getAll(newTetromino.bitmapKey).forEach(function(block) {
-      block.y += 1;
-    });
-  };
-}, blockDropSpeed * 1000); 
+setInterval(function(){
+  MoveBlockDown();
+}, blockDropSpeed * 1000);
 
-
-let pressedKey;
 // Inputs
+let isHoldingS;
+
 onInput("w", () => {
-  console.log("rotating");
-  pressedKey = "w";
+  AddKeyToQueue("w");
 });
 
 onInput("s", () => {
-  console.log("down");
-  pressedKey = "s";
+  AddKeyToQueue("s");
+  if (!isHoldingS) {
+    isHoldingS = true;
+    blockDropSpeed /= 5;
+  };
+  MoveBlockDown();
 });
 
 onInput("a", () => {
-  console.log("left");
-  pressedKey = "a";
+  AddKeyToQueue("a");
+  MoveBlock(-1);
 });
 
 onInput("d", () => {
-  console.log("right");
-  pressedKey = "d";
+  AddKeyToQueue("d");
+  MoveBlock(1);
 });
 
 afterInput(() => {
-
-  // End \\
-  pressedKey = null;
-});
+  if (isHoldingS) {
+    isHoldingS = false;
+    blockDropSpeed *= 5;
+  };
+})
