@@ -28,32 +28,63 @@ const gameMap = map`
 .............`;
 setMap(gameMap)
 
-// Classes
-const TetrominoTypes = {
+// Classes \\
+const mappedSprites = [];
+class MappedSprite {
+    alphabet = "abcdefghijklmnopqrstuvwxyz";
+    readableName = "";
+    bitmapKey = "";
+    bitmap = bitmap``;
+
+    constructor(readableName) {
+        this.readableName = readableName;
+
+        if (mappedSprites.filter(sprite => sprite.readableName === this.readableName).length > 0) {
+            throw new Error(`Sprite with readable name ${this.readableName} already exists`);
+        }
+        
+        // Adrian's custom code that def works
+        // basically my idea was to start with the first letter of the alphabet and then go up from there
+        // if the letter is already taken, then we go to the next letter and so on :D
+        this.bitmapKey = this.alphabet[mappedSprites.length] || this.alphabet[mappedSprites.length - this.alphabet.length];
+        mappedSprites.push({
+            readableName: this.readableName,
+            bitmapKey: this.bitmapKey
+        });
+    }
+
+    setBitmap(bitmap) {
+        this.bitmap = bitmap;
+        return this;
+    }
+}
+
+
+const tetrominoTypes = {
   // Names based on wikipedia: https://en.wikipedia.org/wiki/Tetromino
   straightTetromino: "straightTetromino",
   squareTetromino: "squareTetromino",
   tTetromino: "tTetromino",
   lTetromino: "lTetromino",
-  skewTetromino: "skewTetromino",
+  sTetromino: "sTetromino",
 };
 
-class Tetromino {
-  constructor(bitmapKey, type) {
-    this.bitmapKey = bitmapKey;
-    this.type = type;  
+class Tetromino extends MappedSprite {
+  constructor(type) {
+    super(type);
+    this.type = type;
   };  
 };
 
 // Functions
-function SpawnTetromino(tetromino) {
+function spawnTetromino(tetromino) {
   switch (tetromino.type) {
-    case TetrominoTypes.straightTetromino:
+    case tetrominoTypes.straightTetromino:
       for (let ySpawn = 0; ySpawn < 4; ySpawn++)
         addSprite(blockSpawnPosition.x, blockSpawnPosition.y + ySpawn, tetromino.bitmapKey);
       break;
       
-    case TetrominoTypes.squareTetromino:
+    case tetrominoTypes.squareTetromino:
       for (let xSpawn = 0; xSpawn < 2; xSpawn++) {
         for (let ySpawn = 0; ySpawn < 2; ySpawn++) {
           addSprite(blockSpawnPosition.x + xSpawn, blockSpawnPosition.y + ySpawn, tetromino.bitmapKey);
@@ -61,18 +92,18 @@ function SpawnTetromino(tetromino) {
       };
       break;
 
-    case TetrominoTypes.tTetromino:
+    case tetrominoTypes.tTetromino:
       addSprite(blockSpawnPosition.x + 1, blockSpawnPosition.y + 1, tetromino.bitmapKey);
       for (let xSpawn = 0; xSpawn < 3; xSpawn++) 
         addSprite(blockSpawnPosition.x + xSpawn, blockSpawnPosition.y, tetromino.bitmapKey);
   
-    case TetrominoTypes.lTetromino:
+    case tetrominoTypes.lTetromino:
       for (let ySpawn = 0; ySpawn < 3; ySpawn++)
         addSprite(blockSpawnPosition.x, blockSpawnPosition.y + ySpawn, tetromino.bitmapKey);
       addSprite(blockSpawnPosition.x + 1, blockSpawnPosition.y + 2, tetromino.bitmapKey);
       break;
   
-    case TetrominoTypes.skewTetromino:
+    case tetrominoTypes.sTetromino:
       for (let xSpawn = 0; xSpawn < 2; xSpawn++) {
         addSprite(blockSpawnPosition.x + xSpawn, blockSpawnPosition.y, tetromino.bitmapKey);
       };
@@ -82,14 +113,11 @@ function SpawnTetromino(tetromino) {
       };
       break;
   }; 
+  console.log(mappedSprites);
 }
 
-function AddKeyToQueue(key) {
-    //keyQueue.push(key);
-}
-
-function MoveBlock(direction) { // Direction is a int. -x for left and x for right
-  if (getAll(newTetromino.bitmapKey).every(block => block.y < height() - 1)) {
+function moveBlock(direction) { // Direction is a int. -x for left and x for right
+  if (getAll(newTetromino.bitmapKey).every(block => block.x < width() - 1)) {
     getAll(newTetromino.bitmapKey).forEach(function(block) {
       block.x += direction;
     });
@@ -97,7 +125,7 @@ function MoveBlock(direction) { // Direction is a int. -x for left and x for rig
 };
 
 let dropBlock; 
-function MoveBlockDown() {
+function moveBlockDown() {
   if (getAll(newTetromino.bitmapKey).every(block => block.y < height() - 1)) {
     getAll(newTetromino.bitmapKey).forEach(function(block) {
       block.y += 1;
@@ -106,10 +134,7 @@ function MoveBlockDown() {
 };
 
 // Sprites
-const newTetromino = new Tetromino("b", TetrominoTypes.lTetromino);
-
-setLegend(
-  [ newTetromino.bitmapKey, bitmap`
+const newTetromino = new Tetromino(tetrominoTypes.lTetromino).setBitmap(`
 111111111111111L
 0LLLLLLLLLLLLLL1
 0LLLLLLLLLLLLLL1
@@ -125,45 +150,80 @@ setLegend(
 0LLLLLLLLLLLLLL1
 0LLLLLLLLLLLLLL1
 0LLLLLLLLLLLLLL1
-L111111111111111`]
+L111111111111111`)
+const newTetromino2 = new Tetromino(tetrominoTypes.straightTetromino).setBitmap(`
+111111111111111L
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+L111111111111111`)
+
+setLegend(
+  [ newTetromino.bitmapKey, newTetromino.bitmap ],
+  [ newTetromino2.bitmapKey, newTetromino2.bitmap ]
 );
 
-// Game logic
-SpawnTetromino(newTetromino);
+// Game logic \\
+spawnTetromino(newTetromino);
 
-setInterval(function(){
-  MoveBlockDown();
+setInterval(async () => {
+  const oldY = getAll(newTetromino.bitmapKey).y;
+  moveBlockDown();
+  if (newTetromino.y == getAll(newTetromino.bitmapKey).y) {
+    spawnTetromino(newTetromino2);
+  }
 }, blockDropSpeed * 1000);
 
+setInterval(async () => {
+    keyQueue.shift();
+}, 250)
+
 // Inputs
-let isHoldingS;
+let isHoldingDown;
+const keyQueue = [];
 
 onInput("w", () => {
-  AddKeyToQueue("w");
+  addToKeyQueue("w");
 });
 
 onInput("s", () => {
-  AddKeyToQueue("s");
-  if (!isHoldingS) {
-    isHoldingS = true;
+  addToKeyQueue("s");
+  if (!isHoldingDown) {
+    isHoldingDown = !isHoldingDown;
     blockDropSpeed /= 5;
   };
-  MoveBlockDown();
+  moveBlockDown();
 });
 
 onInput("a", () => {
-  AddKeyToQueue("a");
-  MoveBlock(-1);
+  addToKeyQueue("a");
+  moveBlock(-1);
 });
 
 onInput("d", () => {
-  AddKeyToQueue("d");
-  MoveBlock(1);
+  addToKeyQueue("d");
+  moveBlock(1);
 });
 
+function addToKeyQueue(key) {
+  keyQueue.push({ key, ts: Date.now() });
+  console.log(keyQueue);
+}
+
 afterInput(() => {
-  if (isHoldingS) {
-    isHoldingS = false;
+  if (isHoldingDown) {
+    isHoldingDown = !isHoldingDown;
     blockDropSpeed *= 5;
   };
 })
