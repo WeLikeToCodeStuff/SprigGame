@@ -29,24 +29,32 @@ const gameMap = map`
 setMap(gameMap)
 
 // Classes \\
+const tetrominoTypes = {
+  straightTetromino: "straightTetromino",
+  squareTetromino: "squareTetromino",
+  tTetromino: "tTetromino",
+  lTetromino: "lTetromino",
+  sTetromino: "sTetromino",
+};
+
 const mappedSprites = [];
 class MappedSprite {
-  alphabet = "abcdefghijklmnopqrstuvwxyz";
+  characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890";
   readableName = "";
   bitmapKey = "";
   bitmap = bitmap``;
 
   constructor(readableName) {
-    this.readableName = readableName;
+    this.readableName = `${readableName}${Date.now()}${Math.floor(Math.random()*100)}`;
 
     if (mappedSprites.filter(sprite => sprite.readableName === this.readableName).length > 0) {
-      throw new Error(`Sprite with readable name ${this.readableName} already exists`);
+      throw new Error(`Sprite with readable name "${this.readableName}" already exists`);
     };
 
     // Adrian's custom code that def works
-    // basically my idea was to start with the first letter of the alphabet and then go up from there
+    // basically my idea was to start with the first letter of the characters and then go up from there
     // if the letter is already taken, then we go to the next letter and so on :D
-    this.bitmapKey = this.alphabet[mappedSprites.length] || this.alphabet[mappedSprites.length - this.alphabet.length];
+    this.bitmapKey = this.characters[mappedSprites.length] || this.characters[mappedSprites.length - this.characters.length];
     mappedSprites.push({
       readableName: this.readableName,
       bitmapKey: this.bitmapKey
@@ -59,21 +67,76 @@ class MappedSprite {
   };
 }
 
-const tetrominoTypes = {
-  // Names based on wikipedia: https://en.wikipedia.org/wiki/Tetromino
-  straightTetromino: "straightTetromino",
-  squareTetromino: "squareTetromino",
-  tTetromino: "tTetromino",
-  lTetromino: "lTetromino",
-  sTetromino: "sTetromino",
-};
-
 class Tetromino extends MappedSprite {
   constructor(type) {
     super(type);
     this.type = type;
   };
 };
+
+// Sprites
+function randomTetromino() {
+  const randomNumber = Math.floor(Math.random() * 5);
+  switch (randomNumber) {
+    case 0:
+      return tetrominoTypes.straightTetromino;
+      break;
+    case 1:
+      return tetrominoTypes.squareTetromino;
+      break;
+    case 2:
+      return tetrominoTypes.tTetromino;
+      break;
+    case 3:
+      return tetrominoTypes.lTetromino;
+      break;
+    case 4:
+      return tetrominoTypes.sTetromino;
+      break;
+  };
+};
+
+let newTetromino = new Tetromino(randomTetromino()).setBitmap(bitmap`
+111111111111111L
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+L111111111111111
+`);
+let nextTetromino = new Tetromino(randomTetromino()).setBitmap(bitmap`
+111111111111111L
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+L111111111111111
+`);
+
+setLegend(
+  [newTetromino.bitmapKey, newTetromino.bitmap],
+  [nextTetromino.bitmapKey, nextTetromino.bitmap],
+);
 
 // Functions
 function spawnTetromino(tetromino) {
@@ -116,19 +179,81 @@ function spawnTetromino(tetromino) {
   console.log(mappedSprites);
 }
 
-function moveBlock(direction) { // Direction is a int. -x for left and x for right
-  if (getAll(newTetromino.bitmapKey).every(block => block.x < width() - 1)) {
-    getAll(newTetromino.bitmapKey).forEach(function(block) {
-      block.x += direction;
+function isTetrominoCollidingY(tetromino) { // Function to determine if theres blocks surrounding tetromino. Custom collisions
+  let colliding = false;
+  getAll(tetromino.bitmapKey).forEach(function(tetrominoBlock) {
+    const blocksUnderTetromino = getTile(tetrominoBlock.x, tetrominoBlock.y + 1);
+    blocksUnderTetromino.forEach(function(blockUnderTetromino) {
+      if (blocksUnderTetromino.length > 0 && blockUnderTetromino.type != tetromino.bitmapKey)
+        colliding = true;
     });
+  });
+
+  return colliding;
+};
+
+function isTetrominoCollidingX(tetromino, direction) { // Function to determine if theres blocks surrounding tetromino. Custom collisions
+  let colliding = false;
+  getAll(tetromino.bitmapKey).forEach(function(tetrominoBlock) {
+    const surroundingBlocks = getTile(tetrominoBlock.x + direction, tetrominoBlock.y);
+    surroundingBlocks.forEach(function(block) {
+      if (surroundingBlocks.length > 0 && block.type != tetromino.bitmapKey)
+        colliding = true;
+    });
+  });
+
+  if (colliding)
+    return true;
+  else
+    return false;
+};
+
+function moveBlock(direction) { // Direction is a int. -x for left and x for right
+  if (getAll(newTetromino.bitmapKey).every(block => block.y !== height() - 1) && !isTetrominoCollidingX(newTetromino, direction)) {
+    if (direction == 1 && getAll(newTetromino.bitmapKey).every(block => block.x < width() - 1)) {
+      getAll(newTetromino.bitmapKey).forEach(function(block) {
+        block.x += 1;
+      });
+    } else if (direction == -1 && getAll(newTetromino.bitmapKey).every(block => block.x !== 0)) {
+      getAll(newTetromino.bitmapKey).forEach(function(block) {
+        block.x -= 1;
+      });
+    };
   };
 };
 
 function moveBlockDown() {
-  if (getAll(newTetromino.bitmapKey).every(block => block.y < height() - 1)) {
+  if (!isTetrominoCollidingY(newTetromino) && getAll(newTetromino.bitmapKey).every(block => block.y < height() - 1)) {
     getAll(newTetromino.bitmapKey).forEach(function(block) {
       block.y += 1;
     });
+  } else {
+    newTetromino = nextTetromino;
+    nextTetromino = new Tetromino(randomTetromino()).setBitmap(bitmap`
+111111111111111L
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+0LLLLLLLLLLLLLL1
+L111111111111111
+`);
+
+    setLegend(
+      [newTetromino.bitmapKey, newTetromino.bitmap],
+      [nextTetromino.bitmapKey, nextTetromino.bitmap],
+    );
+
+    spawnTetromino(newTetromino);
   };
 };
 
@@ -148,38 +273,11 @@ function rotateTetromino(tetromino, originIndex, upperLeftBlockIndex) {
   });
 };
 
-// Sprites
-const newTetromino = new Tetromino(tetrominoTypes.sTetromino).setBitmap(`
-111111111111111L
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-L111111111111111`)
-
-setLegend(
-  [newTetromino.bitmapKey, newTetromino.bitmap],
-);
-
 // Game logic \\
 spawnTetromino(newTetromino);
 
 setInterval(async () => {
-  const oldY = getAll(newTetromino.bitmapKey).y;
   moveBlockDown();
-  if (newTetromino.y == getAll(newTetromino.bitmapKey).y) {
-    //spawnTetromino(newTetromino2);
-  }
 }, blockDropSpeed * 1000);
 
 setInterval(async () => {
@@ -195,7 +293,7 @@ onInput("w", () => {
     case tetrominoTypes.straightTetromino:
       rotateTetromino(newTetromino, 1, 0);
       break;
-      
+
     case tetrominoTypes.tTetromino:
       rotateTetromino(newTetromino, 2, 1);
       break;
@@ -208,7 +306,7 @@ onInput("w", () => {
       rotateTetromino(newTetromino, 3, 0);
       break;
   };
-  
+
   addToKeyQueue("w");
 });
 
