@@ -10,23 +10,84 @@ https://sprig.hackclub.com/gallery/getting_started
 
 // Game settings
 let blockDropSpeed = 1; // In seconds
-const blockSpawnPosition = { x: 6, y: 0 };
+const blockSpawnPosition = { x: 4, y: 0 };
 
+const background = "`";
 const gameMap = map`
-.............
-.............
-.............
-.............
-.............
-.............
-.............
-.............
-.............
-.............
-.............
-.............
-.............`;
-setMap(gameMap)
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+..........`;
+
+const blockColours = {
+  darkBlue: bitmap`
+................
+.25555555555557.
+.55255555555557.
+.52555555555557.
+.55555555555557.
+.55555555555557.
+.55555555555557.
+.55555555555557.
+.55555555555557.
+.55555555555557.
+.55555555555557.
+.55555555555557.
+.55555555555557.
+.55555555555557.
+.77777777777775.
+................`,
+  blue: bitmap`
+................
+.25555555555555.
+.52222222222227.
+.52222222222227.
+.52222222222227.
+.52222222222227.
+.52222222222227.
+.52222222222227.
+.52222222222227.
+.52222222222227.
+.52222222222227.
+.52222222222227.
+.52222222222227.
+.52222222222227.
+.77777777777775.
+................`,
+  cyan: bitmap`
+................
+.27777777777775.
+.77277777777775.
+.72777777777775.
+.77777777777775.
+.77777777777775.
+.77777777777775.
+.77777777777775.
+.77777777777775.
+.77777777777775.
+.77777777777775.
+.77777777777775.
+.77777777777775.
+.77777777777775.
+.55555555555557.
+................`,
+};
 
 // Classes \\
 const tetrominoTypes = {
@@ -34,15 +95,34 @@ const tetrominoTypes = {
   squareTetromino: "squareTetromino",
   tTetromino: "tTetromino",
   lTetromino: "lTetromino",
+  lFlippedTetromino: "lFlippedTetromino",
   sTetromino: "sTetromino",
+  sFlippedTetromino: "sFlippedTetromino",
 };
 
 const mappedSprites = [];
-class MappedSprite {
-  characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890";
+class Tetromino {
+  alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
   readableName = "";
   bitmapKey = "";
-  bitmap = bitmap``;
+  bitmap = bitmap`
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................`;
+  type;
 
   constructor(readableName) {
     this.readableName = `${readableName}${Date.now()}${Math.floor(Math.random()*100)}`;
@@ -52,88 +132,71 @@ class MappedSprite {
     };
 
     // Adrian's custom code that def works
-    // basically my idea was to start with the first letter of the characters and then go up from there
+    // basically my idea was to start with the first letter of the alphabet and then go up from there
     // if the letter is already taken, then we go to the next letter and so on :D
-    this.bitmapKey = this.characters[mappedSprites.length] || this.characters[mappedSprites.length - this.characters.length];
+    this.bitmapKey = this.alphabet[mappedSprites.length] || this.alphabet[mappedSprites.length - this.alphabet.length];
     mappedSprites.push({
       readableName: this.readableName,
       bitmapKey: this.bitmapKey
     });
-  };
 
-  setBitmap(bitmap) {
-    this.bitmap = bitmap;
-    return this;
-  };
-}
-
-class Tetromino extends MappedSprite {
-  constructor(type) {
-    super(type);
-    this.type = type;
+    const randomNumber = Math.floor(Math.random() * 7);
+    switch (randomNumber) {
+      case 0:
+        this.type = tetrominoTypes.straightTetromino;
+        this.bitmap = blockColours.blue;
+        break;
+      case 1:
+        this.type = tetrominoTypes.squareTetromino;
+        this.bitmap = blockColours.blue;
+        break;
+      case 2:
+        this.type = tetrominoTypes.tTetromino;
+        this.bitmap = blockColours.blue;
+        break;
+      case 3:
+        this.type = tetrominoTypes.lTetromino;
+        this.bitmap = blockColours.cyan;
+        break;
+      case 4:
+        this.type = tetrominoTypes.sTetromino;
+        this.bitmap = blockColours.darkBlue;
+        break;
+      case 5:
+        this.type = tetrominoTypes.lFlippedTetromino;
+        this.bitmap = blockColours.darkBlue;
+        break;
+      case 6:
+        this.type = tetrominoTypes.sFlippedTetromino;
+        this.bitmap = blockColours.cyan;
+        break;
+    };
   };
 };
 
 // Sprites
-function randomTetromino() {
-  const randomNumber = Math.floor(Math.random() * 5);
-  switch (randomNumber) {
-    case 0:
-      return tetrominoTypes.straightTetromino;
-      break;
-    case 1:
-      return tetrominoTypes.squareTetromino;
-      break;
-    case 2:
-      return tetrominoTypes.tTetromino;
-      break;
-    case 3:
-      return tetrominoTypes.lTetromino;
-      break;
-    case 4:
-      return tetrominoTypes.sTetromino;
-      break;
-  };
-};
-
-let newTetromino = new Tetromino(randomTetromino()).setBitmap(bitmap`
-111111111111111L
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-L111111111111111
-`);
-let nextTetromino = new Tetromino(randomTetromino()).setBitmap(bitmap`
-111111111111111L
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-L111111111111111
-`);
+let newTetromino = new Tetromino();
+let nextTetromino = new Tetromino();
 
 setLegend(
+  [background, bitmap`
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL`],
+
   [newTetromino.bitmapKey, newTetromino.bitmap],
   [nextTetromino.bitmapKey, nextTetromino.bitmap],
 );
@@ -173,6 +236,20 @@ function spawnTetromino(tetromino) {
 
       for (let xSpawn = 0; xSpawn < 2; xSpawn++) {
         addSprite(blockSpawnPosition.x + xSpawn - 1, blockSpawnPosition.y + 1, tetromino.bitmapKey);
+      };
+      break;
+    case tetrominoTypes.lFlippedTetromino:
+       for (let ySpawn = 0; ySpawn < 3; ySpawn++)
+        addSprite(blockSpawnPosition.x, blockSpawnPosition.y + ySpawn, tetromino.bitmapKey);
+      addSprite(blockSpawnPosition.x - 1, blockSpawnPosition.y + 2, tetromino.bitmapKey);
+      break;
+    case tetrominoTypes.sFlippedTetromino:
+      for (let xSpawn = 0; xSpawn < 2; xSpawn++) {
+        addSprite(blockSpawnPosition.x + xSpawn - 1, blockSpawnPosition.y, tetromino.bitmapKey);
+      };
+
+      for (let xSpawn = 0; xSpawn < 2; xSpawn++) {
+        addSprite(blockSpawnPosition.x + xSpawn, blockSpawnPosition.y + 1, tetromino.bitmapKey);
       };
       break;
   };
@@ -229,24 +306,7 @@ function moveBlockDown() {
     });
   } else {
     newTetromino = nextTetromino;
-    nextTetromino = new Tetromino(randomTetromino()).setBitmap(bitmap`
-111111111111111L
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-0LLLLLLLLLLLLLL1
-L111111111111111
-`);
+    nextTetromino = new Tetromino();
 
     setLegend(
       [newTetromino.bitmapKey, newTetromino.bitmap],
@@ -258,6 +318,9 @@ L111111111111111
 };
 
 function rotateTetromino(tetromino, originIndex, upperLeftBlockIndex) {
+  let finalPosition;
+  let collisionDetected = false;
+
   const tetrominoBlocks = getAll(tetromino.bitmapKey);
   const origin = tetrominoBlocks[originIndex];
   const upperLeftBlock = tetrominoBlocks[upperLeftBlockIndex];
@@ -265,15 +328,27 @@ function rotateTetromino(tetromino, originIndex, upperLeftBlockIndex) {
   tetrominoBlocks.splice(tetrominoBlocks.indexOf(origin), 1);
 
   tetrominoBlocks.forEach(function(block) {
+    // TODO: Add a check if the new position is hitting a wall or a tetromino before applying it    
     const relativeX = block.x - origin.x;
     const relativeY = block.y - origin.y;
+    finalPosition = { x: origin.x - relativeY, y: origin.y + relativeX };
 
-    block.x = origin.x - relativeY;
-    block.y = origin.y + relativeX;
+    block.x = finalPosition.x;
+    block.y = finalPosition.y;
   });
 };
 
 // Game logic \\
+addText("LINES", { x: 1, y: 1, color: color`2` })
+addText("000", { x: 1, y: 2, color: color`L` })
+
+addText("SCORE", { x: 14, y: 1, color: color`2` })
+addText("000000", { x: 14, y: 2, color: color`L` })
+
+setMap(gameMap);
+setBackground(background);
+
+
 spawnTetromino(newTetromino);
 
 setInterval(async () => {
@@ -293,17 +368,20 @@ onInput("w", () => {
     case tetrominoTypes.straightTetromino:
       rotateTetromino(newTetromino, 1, 0);
       break;
-
     case tetrominoTypes.tTetromino:
       rotateTetromino(newTetromino, 2, 1);
       break;
-
     case tetrominoTypes.lTetromino:
       rotateTetromino(newTetromino, 1, 0);
       break;
-
     case tetrominoTypes.sTetromino:
       rotateTetromino(newTetromino, 3, 0);
+      break;
+    case tetrominoTypes.lFlippedTetromino:
+      rotateTetromino(newTetromino, 1, 0);
+      break;
+    case tetrominoTypes.sFlippedTetromino:
+      rotateTetromino(newTetromino, 2, 0);
       break;
   };
 
