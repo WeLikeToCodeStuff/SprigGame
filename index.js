@@ -10,7 +10,6 @@ https://sprig.hackclub.com/gallery/getting_started
 
 // Game settings
 let currentLinesAmount = 0;
-
 let blockDropSpeed = 1; // In seconds
 const blockSpawnPosition = { x: 4, y: 0 };
 
@@ -44,7 +43,7 @@ const tetrisTheme = tune`
 201.34228187919464: A4/201.34228187919464,
 201.34228187919464,
 201.34228187919464: A4/201.34228187919464,
-604.026845637584`; 
+604.026845637584`;
 const tetrisThemeBass = tune`
 201.34228187919464: E4^201.34228187919464,
 201.34228187919464: E5^201.34228187919464,
@@ -79,7 +78,7 @@ const tetrisThemeBass = tune`
 201.34228187919464: D4^201.34228187919464,
 201.34228187919464: E5^201.34228187919464`;
 
-const background = "`";
+const background = "/";
 const gameMap = map`
 ..........
 ..........
@@ -372,41 +371,60 @@ function moveBlockDown() {
       block.y += 1;
     });
   } else {
-    newTetromino = nextTetromino;
-    nextTetromino = new Tetromino();
+      for (let y = height() - 1; y >= 0; y--) {
+        const blocksToRemove = [];
+        for (let x = 0; x < width(); x++) {
+          const tile = getTile(x, y);
+          if (tile.length > 0)
+            blocksToRemove.push({ x, y });
+        };
 
-    setLegend(
-      [newTetromino.bitmapKey, newTetromino.bitmap],
-      [nextTetromino.bitmapKey, nextTetromino.bitmap],
-    );
-
-    spawnTetromino(newTetromino);
-
-    // Removes filled lines
-    // Starts from bottom to top
-
-    //currently only does it for one line each time
-    for (let y = height() - 1; y > 0; y--) {
-      let blocksInLine = []; // Array that will have a value either true or false for each line
-      for (let x = 0; x < width(); x++) {
-        const tile = getTile(x, y);
-        if (tile.length > 0 && !blocksInLine.includes(tile))
-          blocksInLine.push({x, y});
-        console.log("block",blocksInLine)
-        if (blocksInLine.length >= width()) {
-          blocksInLine.forEach(function(position) {
-            clearTile(position.x, position.y);
-          });    
-
-          getAll().forEach(function(block) {
-            block.y ++;
+        if (blocksToRemove.length === width()) {
+          blocksToRemove.forEach(function(block) {
+            clearTile(block.x, block.y);
           });
-          currentLinesAmount ++;
+
+          for (let yToRemove = blocksToRemove[0].y - 1; yToRemove >= 0; yToRemove--) {
+            for (let x = 0; x < width(); x++) {
+              getTile(x, yToRemove).forEach(function(block) {
+                block.y++;
+                y++;
+              });
+            };
+          };
+
+          currentLinesAmount++;
           addText(currentLinesAmount.toString().padStart(3, "0"), { x: 1, y: 2, color: color`L` })
         };
       };
-    };
-  };
+
+      newTetromino = nextTetromino;
+      nextTetromino = new Tetromino();
+
+      setLegend(
+        [background, bitmap`
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL`],
+        [newTetromino.bitmapKey, newTetromino.bitmap],
+        [nextTetromino.bitmapKey, nextTetromino.bitmap],
+      );
+
+      spawnTetromino(newTetromino);
+  }
 };
 
 function rotateTetromino(tetromino, originIndex, upperLeftBlockIndex) {
@@ -448,14 +466,7 @@ setInterval(async () => {
   moveBlockDown();
 }, blockDropSpeed * 1000);
 
-setInterval(async () => {
-  keyQueue.shift();
-}, 250)
-
 // Inputs
-let isHoldingDown;
-const keyQueue = [];
-
 onInput("w", () => {
   switch (newTetromino.type) {
     case tetrominoTypes.straightTetromino:
@@ -477,33 +488,16 @@ onInput("w", () => {
       rotateTetromino(newTetromino, 2, 0);
       break;
   };
-
-  addToKeyQueue("w");
 });
 
 onInput("s", () => {
-  addToKeyQueue("s");
   moveBlockDown();
 });
 
 onInput("a", () => {
-  addToKeyQueue("a");
   moveBlock(-1);
 });
 
 onInput("d", () => {
-  addToKeyQueue("d");
   moveBlock(1);
 });
-
-function addToKeyQueue(key) {
-  keyQueue.push({ key, ts: Date.now() });
-  //console.log(keyQueue);
-}
-
-afterInput(() => {
-  if (isHoldingDown) {
-    isHoldingDown = !isHoldingDown;
-    blockDropSpeed *= blockDropSpeedMultiplier;
-  };
-})
