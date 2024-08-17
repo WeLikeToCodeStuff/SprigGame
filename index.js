@@ -9,9 +9,10 @@ https://sprig.hackclub.com/gallery/getting_started
 */
 
 // Game settings
+let currentGameState;
 let currentLinesAmount = 0;
 let blockDropSpeed = 1; // In seconds
-const blockSpawnPosition = { x: 4, y: 0 };
+const blockSpawnPosition = { x: 5, y: 1 };
 
 const tetrisTheme = tune`
 201.34228187919464: E5/201.34228187919464,
@@ -79,27 +80,36 @@ const tetrisThemeBass = tune`
 201.34228187919464: E5^201.34228187919464`;
 
 const background = "/";
+const border = "@";
 const gameMap = map`
-..........
-..........
-..........
-..........
-..........
-..........
-..........
-..........
-..........
-..........
-..........
-..........
-..........
-..........
-..........
-..........
-..........
-..........
-..........
-..........`;
+@@@@@@@@@@@@
+@..........@
+@..........@
+@..........@
+@..........@
+@..........@
+@..........@
+@..........@
+@..........@
+@..........@
+@..........@
+@..........@
+@..........@
+@..........@
+@..........@
+@..........@
+@..........@
+@..........@
+@..........@
+@..........@
+@..........@
+@@@@@@@@@@@@`;
+
+const gameStates = {
+  MENU: "Menu",
+  PLAYING: "Playing",
+  GAME_OVER: "GameOver",
+};
 
 const blockColours = {
   darkBlue: bitmap`
@@ -167,40 +177,18 @@ const tetrominoTypes = {
 };
 
 const mappedSprites = [];
+const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 class Tetromino {
-  alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
   readableName = "";
   bitmapKey = "";
-  bitmap = bitmap`
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................`;
+  bitmap = bitmap``;
   type;
 
   constructor(readableName) {
-    this.readableName = `${readableName}${Date.now()}${Math.floor(Math.random()*100)}`;
-
-    if (mappedSprites.filter(sprite => sprite.readableName === this.readableName).length > 0) {
-      throw new Error(`Sprite with readable name "${this.readableName}" already exists`);
-    };
-
     // Adrian's custom code that def works
     // basically my idea was to start with the first letter of the alphabet and then go up from there
     // if the letter is already taken, then we go to the next letter and so on :D
-    this.bitmapKey = this.alphabet[mappedSprites.length] || this.alphabet[mappedSprites.length - this.alphabet.length];
+    this.bitmapKey = alphabet[mappedSprites.length] || alphabet[mappedSprites.length - alphabet.length];
     mappedSprites.push({
       readableName: this.readableName,
       bitmapKey: this.bitmapKey
@@ -237,12 +225,16 @@ class Tetromino {
         this.bitmap = blockColours.cyan;
         break;
     };
+    this.readableName = `${this.type}${Date.now()}${Math.floor(Math.random()*100)}`;
+    console.log(this.readableName)
+    if (mappedSprites.filter(sprite => sprite.readableName == this.readableName).length > 0) {
+      throw new Error(`Sprite with readable name "${this.readableName}" already exists`);
+    };
   };
 };
 
 // Sprites
 let newTetromino = new Tetromino();
-let nextTetromino = new Tetromino();
 
 setLegend(
   [background, bitmap`
@@ -262,9 +254,25 @@ LLLLLLLLLLLLLLLL
 LLLLLLLLLLLLLLLL
 LLLLLLLLLLLLLLLL
 LLLLLLLLLLLLLLLL`],
+  [border, bitmap`
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000`],
 
   [newTetromino.bitmapKey, newTetromino.bitmap],
-  [nextTetromino.bitmapKey, nextTetromino.bitmap],
 );
 
 // Functions
@@ -319,21 +327,7 @@ function spawnTetromino(tetromino) {
       };
       break;
   };
-  console.log(mappedSprites);
 }
-
-function isTetrominoCollidingY(tetromino) { // Function to determine if theres blocks surrounding tetromino. Custom collisions
-  let colliding = false;
-  getAll(tetromino.bitmapKey).forEach(function(tetrominoBlock) {
-    const blocksUnderTetromino = getTile(tetrominoBlock.x, tetrominoBlock.y + 1);
-    blocksUnderTetromino.forEach(function(blockUnderTetromino) {
-      if (blocksUnderTetromino.length > 0 && blockUnderTetromino.type != tetromino.bitmapKey)
-        colliding = true;
-    });
-  });
-
-  return colliding;
-};
 
 function isTetrominoCollidingX(tetromino, direction) { // Function to determine if theres blocks surrounding tetromino. Custom collisions
   let colliding = false;
@@ -351,6 +345,58 @@ function isTetrominoCollidingX(tetromino, direction) { // Function to determine 
     return false;
 };
 
+function isTetrominoCollidingY(tetromino) { // Function to determine if theres blocks surrounding tetromino. Custom collisions
+  let colliding = false;
+  getAll(tetromino.bitmapKey).forEach(function(tetrominoBlock) {
+    const blocksUnderTetromino = getTile(tetrominoBlock.x, tetrominoBlock.y + 1);
+    blocksUnderTetromino.forEach(function(blockUnderTetromino) {
+      if (blocksUnderTetromino.length > 0 && blockUnderTetromino.type != tetromino.bitmapKey)
+        colliding = true;
+    });
+  });
+
+  return colliding;
+};
+
+
+function rotateTetromino(tetromino, originIndex, upperLeftBlockIndex) {
+  let finalPosition;
+  let canRotate = false;
+
+  const destinations = [];
+  const tetrominoBlocks = getAll(tetromino.bitmapKey);
+  const origin = tetrominoBlocks[originIndex];
+
+  tetrominoBlocks.splice(tetrominoBlocks.indexOf(origin), 1);
+  tetrominoBlocks.forEach(function(block) {
+    const relativeX = block.x - origin.x;
+    const relativeY = block.y - origin.y;
+    finalPosition = { x: origin.x - relativeY, y: origin.y + relativeX };
+
+    const tile = getTile(finalPosition.x, finalPosition.y)
+    destinations.push(finalPosition)
+  });
+
+  destinations.forEach(function(position) {
+    const tile = getTile(position.x, position.y);
+    if (tile.length > 0) {
+      if (tile[0].type != tetromino.bitmapKey)
+        destinations.splice(position, 1);
+    };
+  });
+
+  if (destinations.length == 3) {
+    tetrominoBlocks.forEach(function(block) {
+      const relativeX = block.x - origin.x;
+      const relativeY = block.y - origin.y;
+      finalPosition = { x: origin.x - relativeY, y: origin.y + relativeX };
+
+      block.x = finalPosition.x;
+      block.y = finalPosition.y;
+    });
+  };
+}
+
 function moveBlock(direction) { // Direction is a int. -x for left and x for right
   if (getAll(newTetromino.bitmapKey).every(block => block.y !== height() - 1) && !isTetrominoCollidingX(newTetromino, direction)) {
     if (direction == 1 && getAll(newTetromino.bitmapKey).every(block => block.x < width() - 1)) {
@@ -366,43 +412,21 @@ function moveBlock(direction) { // Direction is a int. -x for left and x for rig
 };
 
 function moveBlockDown() {
+  if (currentGameState != gameStates.PLAYING) {
+    addText("GAME", { x: 8, y: 5, color: color`3` })
+    addText("OVER", { x: 8, y: 7, color: color`3` })
+    return;
+  };
+
   if (!isTetrominoCollidingY(newTetromino) && getAll(newTetromino.bitmapKey).every(block => block.y < height() - 1)) {
     getAll(newTetromino.bitmapKey).forEach(function(block) {
       block.y += 1;
     });
   } else {
-      for (let y = height() - 1; y >= 0; y--) {
-        const blocksToRemove = [];
-        for (let x = 0; x < width(); x++) {
-          const tile = getTile(x, y);
-          if (tile.length > 0)
-            blocksToRemove.push({ x, y });
-        };
-
-        if (blocksToRemove.length === width()) {
-          blocksToRemove.forEach(function(block) {
-            clearTile(block.x, block.y);
-          });
-
-          for (let yToRemove = blocksToRemove[0].y - 1; yToRemove >= 0; yToRemove--) {
-            for (let x = 0; x < width(); x++) {
-              getTile(x, yToRemove).forEach(function(block) {
-                block.y++;
-                y++;
-              });
-            };
-          };
-
-          currentLinesAmount++;
-          addText(currentLinesAmount.toString().padStart(3, "0"), { x: 1, y: 2, color: color`L` })
-        };
-      };
-
-      newTetromino = nextTetromino;
-      nextTetromino = new Tetromino();
-
-      setLegend(
-        [background, bitmap`
+    const nextTetromino = new Tetromino();
+    newTetromino = nextTetromino;
+    setLegend(
+      [background, bitmap`
 LLLLLLLLLLLLLLLL
 LLLLLLLLLLLLLLLL
 LLLLLLLLLLLLLLLL
@@ -419,36 +443,69 @@ LLLLLLLLLLLLLLLL
 LLLLLLLLLLLLLLLL
 LLLLLLLLLLLLLLLL
 LLLLLLLLLLLLLLLL`],
-        [newTetromino.bitmapKey, newTetromino.bitmap],
-        [nextTetromino.bitmapKey, nextTetromino.bitmap],
-      );
+      [border, bitmap`
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000`],
+      [newTetromino.bitmapKey, newTetromino.bitmap],
+      [nextTetromino.bitmapKey, nextTetromino.bitmap],
+    );
 
-      spawnTetromino(newTetromino);
-  }
-};
+    spawnTetromino(newTetromino);
 
-function rotateTetromino(tetromino, originIndex, upperLeftBlockIndex) {
-  let finalPosition;
-  let collisionDetected = false;
+    for (let y = height() - 2; y >= 1; y--) {
+      let isFirstRowFilled = true;
+      const blocksToRemove = [];
+      for (let x = 1; x < width() - 1; x++) {
+        if (isTetrominoCollidingY(newTetromino))
+          isFirstRowFilled = false;
 
-  const tetrominoBlocks = getAll(tetromino.bitmapKey);
-  const origin = tetrominoBlocks[originIndex];
-  const upperLeftBlock = tetrominoBlocks[upperLeftBlockIndex];
+        const tile = getTile(x, y);
+        if (tile.length > 0)
+          blocksToRemove.push({ x, y });
+      };
 
-  tetrominoBlocks.splice(tetrominoBlocks.indexOf(origin), 1);
+      if (!isFirstRowFilled)
+        currentGameState = gameStates.GAME_OVER; // MAKE IT BETTER
 
-  tetrominoBlocks.forEach(function(block) {
-    // TODO: Add a check if the new position is hitting a wall or a tetromino before applying it    
-    const relativeX = block.x - origin.x;
-    const relativeY = block.y - origin.y;
-    finalPosition = { x: origin.x - relativeY, y: origin.y + relativeX };
+      if (blocksToRemove.length == width() - 2) {
+        blocksToRemove.forEach(function(block) {
+          clearTile(block.x, block.y);
+        });
 
-    block.x = finalPosition.x;
-    block.y = finalPosition.y;
-  });
+        for (let yToRemove = blocksToRemove[0].y - 1; yToRemove >= 1; yToRemove--) {
+          for (let x = 1; x < width() - 1; x++) {
+            getTile(x, yToRemove).forEach(function(block) {
+              block.y++;
+              if (y < 19)
+                y++;
+            });
+          };
+        };
+
+        currentLinesAmount++;
+        addText(currentLinesAmount.toString().padStart(3, "0"), { x: 1, y: 2, color: color`L` })
+      };
+    };
+  };
 };
 
 // Game logic \\
+currentGameState = gameStates.PLAYING;
+
 addText("LINES", { x: 1, y: 1, color: color`2` })
 addText("000", { x: 1, y: 2, color: color`L` })
 
